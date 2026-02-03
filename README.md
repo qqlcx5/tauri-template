@@ -1,4 +1,4 @@
-这是一个非常标准但“坑”很多的过程。**Windows 上安装 Rust/Tauri 必须严格按照顺序来，否则后期报错会让你非常头疼。**
+**Windows 上安装 Rust/Tauri 必须严格按照顺序来，否则后期报错会让你非常头疼。**
 
 这是世界上最懂这行的人（比如 Tauri 核心团队或 Rust 资深开发者）会给你的 **“避坑指南”**。
 
@@ -47,7 +47,7 @@ cargo --version
 
 ```toml
 [source.crates-io]
-replace-with = 'rsproxy'
+replace-with = 'rsproxy-sparse'
 
 [source.rsproxy]
 registry = "https://rsproxy.cn/crates.io-index"
