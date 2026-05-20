@@ -53,4 +53,5 @@
 3. **Navigation**: 使用 Shadcn `<Button variant="ghost">`，但应用 `h-8 text-[13px] justify-start text-zinc-500 hover:text-zinc-900` 的样式，模仿 Arc 的侧边栏交互。
 
 # Output Format
+
 直接提供代码块，不要废话。先给 CSS 变量，再给 Uno配置，最后给 Vue 组件。
