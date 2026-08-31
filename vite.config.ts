@@ -1,6 +1,9 @@
 import { defineConfig, type UserConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 import UnoCSS from "unocss/vite";
+import AutoImport from "unplugin-auto-import/vite";
+import Components from "unplugin-vue-components/vite";
+import { ElementPlusResolver } from "unplugin-vue-components/resolvers";
 
 // 本项目未引入 @types/node，直接写 `process` 只能靠 @ts-expect-error 压制类型错误；
 // 而一旦后续装上 @types/node，那条 @ts-expect-error 又会因"没有错误"变成新的编译错误。
@@ -15,7 +18,30 @@ const host = (
 // 这里用同步回调而非 async：配置内没有异步操作，而 tsconfig.node.json 未指定 target/lib
 // （默认 ES5，无 Promise 声明），写成 async 会报 TS2705。
 export default defineConfig((): UserConfig => ({
-  plugins: [vue(), UnoCSS()],
+  plugins: [
+    vue(),
+    UnoCSS(),
+    // Element Plus 按需引入（官方 Quick Start 的 "Auto Import" 方案）。两个插件各管一半，缺一不可：
+    // - Components：处理模板里的 <el-xxx> 标签，自动补组件 import + 对应样式
+    // - AutoImport：处理 <script setup> 里的 ElMessage 这类函数式调用。它们不出现在模板中，
+    //   Components 扫不到；漏掉这个插件，弹窗就只剩无样式的裸 div。
+    //
+    // importStyle 可选值（见 unplugin-vue-components/dist/resolvers.mjs 的 getSideEffects）：
+    //   "css"（默认，源码里是 options.importStyle ?? "css"）取编译好的 CSS；
+    //   "less" / "css-in-js" 走运行时样式；false 则完全不引样式。
+    // 注意没有 "sass" 这个取值——想改 EP 主题请走官方 Theming（SCSS 变量覆盖），
+    // 与本插件的 importStyle 无关。
+    //
+    // dts 放在 src/ 下，确保被 tsconfig 的 include 覆盖（已用 vue-tsc --listFiles 验证加载）。
+    Components({
+      resolvers: [ElementPlusResolver({ importStyle: "css" })],
+      dts: "src/components.d.ts",
+    }),
+    AutoImport({
+      resolvers: [ElementPlusResolver({ importStyle: "css" })],
+      dts: "src/auto-imports.d.ts",
+    }),
+  ],
 
   // 装了 sass-embedded 后 Vite 会自动优先用它（比 sass 快数倍）。
   // 显式声明 api 可抑制 legacy JS API 的弃用告警。

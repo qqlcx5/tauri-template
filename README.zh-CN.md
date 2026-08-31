@@ -4,10 +4,11 @@
 [![Vue](https://img.shields.io/badge/Vue-3.5-42b883?logo=vuedotjs&logoColor=white)](https://vuejs.org)
 [![UnoCSS](https://img.shields.io/badge/UnoCSS-Wind4-333?logo=unocss&logoColor=white)](https://unocss.dev)
 [![Element Plus](https://img.shields.io/badge/Element%20Plus-2.14-409eff?logo=element&logoColor=white)](https://element-plus.org)
+[![Pinia](https://img.shields.io/badge/Pinia-4-ffd859?logo=pinia&logoColor=black)](https://pinia.vuejs.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
 
 开箱即用的桌面端脚手架：**Tauri 2（Rust）** + **Vue 3（TypeScript）** + **Vite 6** + **UnoCSS（Tailwind4 预设）**
-+ **Element Plus**。暗黑模式联动、产物分包、Windows 工具链坑位都已预先配置好。
++ **Element Plus** + **Vue Router** + **Pinia**。暗黑模式联动、产物分包、CSP 加固、Windows 工具链坑位都已预先配置好。
 
 [English version](./README.md)
 
@@ -17,10 +18,11 @@
 
 | 常见痛点 | 本模板的做法 |
 | --- | --- |
-| Element Plus 暗黑模式与 UnoCSS `dark:` 变体各管各的 | 统一由 `<html class="dark">` 驱动，状态存 `localStorage`，刷新不闪回 |
-| reset 排在 Element Plus 之后，把组件样式一起重置掉 | `reset: false` 关掉内置 reset，改由 `@unocss/reset/tailwind-compat.css` 最前引入 |
+| Element Plus 暗黑模式与 UnoCSS `dark:` 变体各管各的 | 统一由 `<html class="dark">` 驱动，状态放在 Pinia store 里并持久化到 `localStorage`，刷新不闪回 |
+| reset 排在 Element Plus 之后，把组件样式一起重置掉 | `reset: false` 关掉内置 reset，改由本地 `src/styles/reset.css` 最前引入，其中 `button { background-color: transparent }` 规则被刻意注释掉 |
+| Vue Router 用 `createWebHistory` 打包后白屏 | 改用 `createWebHashHistory()`——Tauri 自定义协议背后没有服务端能把 `/settings` 回退到 `index.html` |
 | UnoCSS 图标预设全盘扫描 `node_modules`，pnpm 下构建卡死 | 显式声明 `collections`（当前为 `tabler`） |
-| `file://` 场景下单个巨大 JS 包 | `manualChunks()` 拆出 `vue` / `element-plus` / `lodash` / `vendor` |
+| `file://` 场景下单个巨大 JS 包 | `manualChunks()` 拆出 `vue` / `element-plus` / `lodash` / `vendor`，路由再按页面懒加载分包 |
 | Sass legacy API 弃用告警 | 使用 `sass-embedded` + `api: "modern-compiler"` |
 | 真机 / 局域网调试 HMR 连不上 | `TAURI_DEV_HOST` 自动配置 HMR host 与端口 |
 | 国内 `cargo` 拉包极慢 | 镜像源配置见 [initialize.md](./initialize.md) |
@@ -31,6 +33,8 @@
 | --- | --- | --- |
 | 运行时 / 外壳 | Tauri（Rust，edition 2021） | 2.x |
 | UI 框架 | Vue 3（`<script setup>` + TS） | 3.5 |
+| 路由 | Vue Router（hash 模式，按页懒加载） | 5 |
+| 状态管理 | Pinia（setup store 写法） | 4 |
 | 语言 | TypeScript | 5.6 |
 | 构建工具 | Vite | 6 |
 | CSS 引擎 | UnoCSS（`presetWind4` + `presetIcons` + `presetAttributify`） | 66 |
@@ -105,20 +109,158 @@ pnpm dev         # 仅浏览器，http://localhost:1420
 ├── uno.config.ts          # 预设、主题色、shortcuts（已关闭内置 reset）
 ├── vite.config.ts         # Vue + UnoCSS + 分包 + Tauri 开发服务器配置
 ├── src/
-│   ├── main.ts            # 引入顺序：reset → Element Plus → uno.css → 全局 scss
-│   ├── App.vue            # 布局外壳、暗黑模式切换
+│   ├── main.ts            # 启动装配：createPinia → ElementPlus → router
+│   ├── App.vue            # 布局外壳、导航链接、暗黑模式切换
+│   ├── router/index.ts    # 路由表，hash 模式，按页懒加载
+│   ├── stores/theme.ts    # Pinia setup store（暗黑模式 + 持久化）
+│   ├── views/             # HomeView / SettingsView / NotFoundView
 │   ├── components/        # Demo*.vue，替换为你的业务组件
-│   ├── styles/demo.scss   # 全局 SCSS（可直接写 @apply）
+│   ├── styles/
+│   │   ├── reset.css      # 浏览器样式重置，在 Element Plus 之前加载
+│   │   └── demo.scss      # 全局 SCSS（可直接写 @apply）
 │   └── assets/
 └── src-tauri/
     ├── Cargo.toml
-    ├── tauri.conf.json    # productName、identifier、窗口、打包配置
+    ├── tauri.conf.json    # productName、identifier、窗口、打包、CSP
     ├── capabilities/      # 权限集合（Tauri 2 默认最小权限）
     ├── icons/             # 图标资源
     └── src/
         ├── main.rs        # 二进制入口
         └── lib.rs         # run() 与 greet 命令示例
 ```
+
+## 路由与状态管理
+
+### 路由：hash 模式不是可选项
+
+```ts
+// src/router/index.ts
+history: createWebHashHistory(),
+routes: [
+  { path: "/",              name: "home",       component: () => import("../views/HomeView.vue") },
+  { path: "/settings",      name: "settings",   component: () => import("../views/SettingsView.vue") },
+  { path: "/:pathMatch(.*)*", name: "not-found", component: () => import("../views/NotFoundView.vue") },
+],
+```
+
+**不要改成 `createWebHistory()`。** 打包后前端由 Tauri 自定义协议
+（`tauri://localhost` / `http://tauri.localhost`）提供，背后没有服务端把 `/settings` 重写回
+`index.html`，结果是跳转或刷新直接白屏。hash 模式把路径放在 `#` 后，请求始终指向 `index.html`。
+
+路由用动态 `import()`，每个页面单独成 chunk。
+
+### 状态：Pinia setup store
+
+```ts
+// src/stores/theme.ts
+export const useThemeStore = defineStore("theme", () => {
+  const isDark = ref(localStorage.getItem(STORAGE_KEY) === "1");
+  function toggle() { isDark.value = !isDark.value; }
+  watch(isDark, (dark) => {
+    document.documentElement.classList.toggle("dark", dark);
+    localStorage.setItem(STORAGE_KEY, dark ? "1" : "0");
+  });
+  return { isDark, toggle };
+});
+```
+
+读 state 用 `storeToRefs()`，保证解构后不丢响应式；action 直接从 store 实例上取：
+
+```vue
+<script setup lang="ts">
+import { storeToRefs } from "pinia";
+import { useThemeStore } from "../stores/theme";
+
+const theme = useThemeStore();
+const { isDark } = storeToRefs(theme);
+</script>
+```
+
+`src/main.ts` 里的注册顺序有讲究——**Pinia 先于 router**（路由守卫可能用到 store），
+**router 先于 `mount`**（否则首屏匹配不到路由）：
+
+```ts
+createApp(App).use(createPinia()).use(ElementPlus).use(router).mount("#app");
+```
+
+> `localStorage` 能用，但它绑定 WebView、容易丢。要真正的本地持久化，把
+> `src/stores/theme.ts` 里那两行读写换成 `tauri-plugin-store` 即可，其他文件都不用动。
+
+## Element Plus 按需加载
+
+Element Plus 通过 `unplugin-vue-components` + `unplugin-auto-import` 按需引入
+（官方文档 [Quick Start](https://element-plus.org/zh-CN/guide/quickstart.html) 的「自动导入」方案）。
+项目里**没有** `import "element-plus/dist/index.css"`，也**没有** `app.use(ElementPlus)`。
+
+### 两个插件缺一不可
+
+| 插件 | 负责范围 |
+| --- | --- |
+| `Components` | 模板里的 `<el-xxx>` 标签——自动补组件 import + 对应样式 |
+| `AutoImport` | `<script setup>` 里的 `ElMessage` / `ElNotification` 这类函数式调用 |
+
+少了 `AutoImport`，消息弹窗会变成无样式裸 div：它们不出现在模板中，`Components` 扫不到，
+也就没人注入 `el-message` 的样式。
+
+### 全局配置改用 el-config-provider
+
+`app.use(ElementPlus, { size, zIndex })` 不存在了，改为包裹根组件：
+
+```vue
+<el-config-provider :size="'small'" :z-index="3000">
+  <RouterView />
+</el-config-provider>
+```
+
+### 必须从 tsconfig 移除 element-plus/global
+
+`tsconfig.json` 的 `compilerOptions.types` **不要**写 `element-plus/global`。
+它会把全部组件注册为全局类型，于是「组件根本没引入」时 TypeScript 也不报错——
+这恰好是按需加载本该暴露的问题。改用插件生成的 `src/components.d.ts`，只声明实际用到的组件。
+
+### 不要在模板里直接调用 ElMessage
+
+`AutoImport` 把 `ElMessage` 暴露为**全局 const**，在 `<script setup>` 里能解析，
+但**模板表达式不走全局作用域**：
+
+```vue
+<!-- ✗ TS2339: Property 'ElMessage' does not exist -->
+<el-button @click="ElMessage.info('hi')">Message</el-button>
+```
+
+```ts
+// ✓ 模板只绑事件，调用收进 script
+function showMessage() { ElMessage.info("hi"); }
+```
+
+### 样式顺序依然要紧
+
+按需样式注入在组件模块所在的依赖图位置，因此 `src/main.ts` 里
+`./App.vue` 与 `./router` 的 import 必须排在 `virtual:uno.css` **之前**。
+否则 EP 的 CSS 会落到原子类之后，同权重下反过来盖住原子类
+（例如 `<el-tag class="hidden">` 会重新显示出来）。
+
+### 实测效果
+
+| 产物 | 改动前 | 改动后 |
+| --- | --- | --- |
+| `style.css` | 401.03 kB | **208.06 kB**（−48%） |
+| `element-plus.js` | 769.51 kB | 767.69 kB |
+
+tree-shaking 已验证：在 chunk 里搜 10 个从未使用的组件名
+（`ElColorPicker`、`ElUpload`、`ElTree`、`ElCarousel`、`ElCascader`、`ElTransfer`、
+`ElTimeline`、`ElCalendar`、`ElBacktop`、`ElDrawer`），**全部 0 命中**。
+
+本 demo 的 JS 几乎没变小，是因为它刻意用到了 22 个组件中的 18 个，还包含
+`ElTable`、`ElDatePicker`、`ElSelect` 这类重型组件。真实项目若只用少量组件，JS 收益会明显得多。
+
+### 关于 pnpm + dayjs
+
+Element Plus 文档提示：`ElDatePicker` 内部依赖的 `dayjs` 是 CJS 包，pnpm 下需要依赖提升，
+或执行 `pnpm add dayjs`。**本项目实测无需处理**：Vite 6 + pnpm 12 下 `dayjs` 已内联进
+`element-plus_es.js` 预构建产物（212 处命中），输出中零 `require(` 残留，生产产物零 `module.exports`。
+若你在其他工具链上真遇到 `dayjs` 报错，优先用 `pnpm add dayjs`，
+不要上 `shamefullyHoist`——后者会把 node_modules 拍平，彻底丢掉 pnpm 的隔离优势。
 
 ## 前端调用 Rust
 
@@ -143,8 +285,9 @@ const message = await invoke<string>("greet", { name: "World" });
 
 ## 配置要点
 
-- **暗黑模式**：`src/App.vue` 的 `applyDark()` 切换 `<html class="dark">`，同时驱动 Element Plus
-  的 CSS 变量与 UnoCSS 的 `dark:` 变体，状态存在 `localStorage` 的 `demo:dark` 键。
+- **暗黑模式**：`src/stores/theme.ts` 的 `useThemeStore()` 切换 `<html class="dark">`，同时驱动
+  Element Plus 的 CSS 变量与 UnoCSS 的 `dark:` 变体，状态持久化在 `localStorage` 的 `demo:dark` 键。
+  store 在创建时会先应用一次已保存的值——`watch` 默认非 immediate，否则首帧会闪一下错误主题。
 - **主题色**：`uno.config.ts` 把 `primary` / `success` / `warning` / `danger` 对齐 Element Plus 调色板，
   保证 `text-danger` 这类原子类与组件视觉一致。
 - **shortcuts**：`flex-center`、`flex-col-center`、`bg-page`、`text-regular`、`text-secondary`，
@@ -169,7 +312,9 @@ const message = await invoke<string>("greet", { name: "World" });
 
 ## 路线图
 
-- [ ] 接入 Vue Router 与 Pinia
+- [x] 接入 Vue Router 5（hash 模式）与 Pinia 4
+- [ ] `tauri-plugin-store` 持久化示例
+- [ ] `tauri-plugin-log` + `single-instance` 接入
 - [ ] 自动更新（updater 插件）示例
 - [ ] 系统托盘与原生菜单示例
 - [ ] 多窗口示例

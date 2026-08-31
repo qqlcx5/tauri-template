@@ -20,8 +20,10 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
 
-    /* Element Plus 全局组件类型 */
-    "types": ["element-plus/global"]
+    /* 不要加 "element-plus/global"：它会把全部 EP 组件注册成全局类型，
+       结果就是「类型上全都可用、运行时却可能没引入」，按需加载失效也查不出来。
+       改用 unplugin-vue-components 生成的 src/components.d.ts——用到哪个才声明哪个。 */
+    "types": []
   },
   "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", "src/**/*.vue"],
   "references": [{ "path": "./tsconfig.node.json" }]

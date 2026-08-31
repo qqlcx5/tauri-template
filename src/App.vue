@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ElMessage } from "element-plus";
+// ElMessage 无需 import：unplugin-auto-import 会自动注入组件与样式
 import { useThemeStore } from "./stores/theme";
 
 const theme = useThemeStore();

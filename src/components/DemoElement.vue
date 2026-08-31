@@ -1,6 +1,6 @@
 <script setup lang="ts">
+// ElMessage / ElNotification 无需 import：unplugin-auto-import 会自动注入组件与样式
 import { ref } from "vue";
-import { ElMessage, ElNotification } from "element-plus";
 import { invoke } from "@tauri-apps/api/core";
 
 // —— 表单 ——
@@ -24,6 +24,19 @@ function notifyMe() {
     message: "ElNotification 与 UnoCSS 共用同一套主题变量",
     type: "success",
   });
+}
+
+// 下面两个函数存在的意义不只是复用：
+// auto-import 提供的 ElMessage 是「全局 const」，只在 <script setup> 里可解析。
+// 若在模板里直接写 @click="ElMessage.info(...)" ，模板表达式不走全局作用域，
+// vue-tsc 会报 TS2339「Property 'ElMessage' does not exist」。
+// 所以模板只做事件绑定，具体调用一律收进 script。
+function onConfirm() {
+  ElMessage.success("已确认");
+}
+
+function showMessage() {
+  ElMessage.info("ElMessage 提示");
 }
 
 // —— Tauri ——
@@ -139,13 +152,13 @@ async function greet() {
         <el-button>Tooltip</el-button>
       </el-tooltip>
 
-      <el-popconfirm title="确定要执行吗？" @confirm="ElMessage.success('已确认')">
+      <el-popconfirm title="确定要执行吗？" @confirm="onConfirm">
         <template #reference>
           <el-button type="warning" plain>Popconfirm</el-button>
         </template>
       </el-popconfirm>
 
-      <el-button @click="ElMessage.info('ElMessage 提示')">Message</el-button>
+      <el-button @click="showMessage">Message</el-button>
       <el-button type="success" @click="notifyMe">Notification</el-button>
 
       <!-- 关键演示：Dialog 挂载在 body 下，原子类依然要生效 -->

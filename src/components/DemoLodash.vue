@@ -1,6 +1,6 @@
 <script setup lang="ts">
+// ElMessage 无需 import：unplugin-auto-import 会自动注入组件与样式
 import { computed, onBeforeUnmount, ref, watch } from "vue";
-import { ElMessage } from "element-plus";
 import {
   camelCase,
   chunk,
