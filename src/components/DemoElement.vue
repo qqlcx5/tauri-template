@@ -42,9 +42,10 @@ async function greet() {
       Element Plus：全量引入
     </h2>
     <p class="demo-card__hint">
-      样式加载顺序为 <code class="code-block">element-plus/dist/index.css</code> →
+      样式加载顺序为 <code class="code-block">styles/reset.css</code> →
+      <code class="code-block">element-plus/dist/index.css</code> →
       <code class="code-block">dark/css-vars.css</code> →
-      <code class="code-block">virtual:uno.css</code>，最后加载的 UnoCSS 才能覆盖组件默认样式。
+      <code class="code-block">virtual:uno.css</code>。reset 打头、原子类收尾，中间夹组件库。
     </p>
 
     <el-divider content-position="left">

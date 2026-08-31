@@ -29,7 +29,7 @@ weekend debugging:
 | Pain point | Solved here |
 | --- | --- |
 | Element Plus dark mode and UnoCSS `dark:` variants fighting each other | Both driven by one `<html class="dark">` toggle, persisted to `localStorage` |
-| UnoCSS `presetWind4` reset wipes Element Plus button backgrounds | Inlined `preflights` patch (no extra `@unocss/reset` dependency) |
+| UnoCSS reset loaded after Element Plus wipes component styles | `reset: false` disables the built-in one; `@unocss/reset/tailwind-compat.css` is imported first instead |
 | UnoCSS icon preset scans all of `node_modules` and hangs under pnpm | Icon collections declared explicitly (`tabler`) |
 | One giant JS bundle loaded from `file://` | `manualChunks()` splits `vue` / `element-plus` / `lodash` / `vendor` |
 | Sass legacy API deprecation warnings | `sass-embedded` + `api: "modern-compiler"` |
@@ -65,7 +65,7 @@ components · lodash-es helpers) with a light/dark toggle in the header.
 ### 1. Prerequisites
 
 - **Node.js 20 LTS+** and **pnpm 9+**
-- **Rust 1.77+** ([rustup](https://rustup.rs))
+- **Rust 1.77.2+** ([rustup](https://rustup.rs)) — Tauri 2's MSRV; verify your toolchain with `pnpm tauri info`
 - **Platform build tools**
   - Windows: *Build Tools for Visual Studio 2022* with **Desktop development with C++** + Windows 10/11 SDK
   - macOS: Xcode Command Line Tools (`xcode-select --install`)
@@ -98,14 +98,19 @@ A window titled `tauri-vue3-template` opens. Edit `src/App.vue` and it hot-reloa
 
 ### 4. Rename it to your app
 
-Four places hold the name `tauri-vue3-template`:
+Five places hold the name `tauri-vue3-template` — missing **#4 is the #1 cause of "cannot find crate" build errors**:
 
 1. `package.json` → `name`
-2. `src-tauri/Cargo.toml` → `name` **and** `[lib].name` (`tauri_vue3_template_lib`, underscores)
-3. `src-tauri/tauri.conf.json` → `productName`, `identifier` (`com.<you>.<app>`), window `title`
-4. `src-tauri/gen/schemas/*` if you regenerate capabilities
+2. `src-tauri/Cargo.toml` → `name` **and** `[lib].name` (`tauri_vue3_template_lib`, underscores, no dashes)
+3. `src-tauri/tauri.conf.json` → `productName`, `identifier` (**must be globally unique** — the template ships `com.example.tauri-vue3-template`), window `title`
+4. `src-tauri/src/main.rs` → `tauri_vue3_template_lib::run()` — **must match `[lib].name` exactly**, the compiler will not infer it
+5. `index.html` → `<title>` (visible only in the dev/browser window, easy to forget)
+6. `src-tauri/tauri.conf.json` → `bundle.publisher` / `bundle.copyright` (both ship as `Your Name`; required for MSI / RPM / AppImage)
+7. `LICENSE` → copyright holder line
 
-Then delete the demo components (`src/components/Demo*.vue`) and their imports in `src/App.vue`.
+`src-tauri/Cargo.lock` updates itself on the next `cargo` run, and `src-tauri/gen/schemas/*` is generated capability JSON Schema — neither contains your app name.
+
+Then delete the demo components (`src/components/Demo*.vue`) and their imports in `src/App.vue`, and verify with `pnpm build && pnpm tauri build`.
 
 ## Commands
 
@@ -123,10 +128,10 @@ Then delete the demo components (`src/components/Demo*.vue`) and their imports i
 ```
 .
 ├── index.html
-├── uno.config.ts          # presets, theme colors, shortcuts, preflight patch
+├── uno.config.ts          # presets, theme colors, shortcuts (built-in reset off)
 ├── vite.config.ts         # Vue + UnoCSS + manualChunks + Tauri dev server
 ├── src/
-│   ├── main.ts            # Element Plus + dark css-vars + uno.css + global scss
+│   ├── main.ts            # import order: reset → Element Plus → uno.css → scss
 │   ├── App.vue            # layout shell, dark-mode toggle
 │   ├── components/        # Demo*.vue — replace these
 │   ├── styles/demo.scss   # global SCSS (@apply works here)
@@ -174,6 +179,22 @@ Add new permissions in `src-tauri/capabilities/default.json` — Tauri 2 is deny
   they are never generated.
 - **Fixed port**: Vite is pinned to `1420` with `strictPort: true`; `src-tauri` is excluded from the
   watcher so Rust rebuilds are not triggered by frontend saves.
+
+## Security
+
+- **CSP is on** — `app.security.csp` in `tauri.conf.json`, object form. Tauri injects nonces and
+  hashes for bundled scripts/styles at compile time, so `script-src` needs no `'unsafe-inline'`.
+- **Dev uses its own policy** — `app.security.devCsp` is deliberately looser so Vite HMR
+  (`ws://localhost:1421`) keeps working. Tauri falls back to `csp` in dev when `devCsp` is unset,
+  which is exactly what breaks HMR — do not delete `devCsp`.
+- **`connect-src` is IPC-only** (`ipc: http://ipc.localhost`). If your app calls an external API, add
+  its origin, or `fetch` will fail in the packaged app while working fine in `pnpm dev`.
+- **Least-privilege permissions** — `src-tauri/capabilities/default.json` grants `core:default` +
+  `opener:default` only. Tauri 2 is deny-by-default.
+- **File drops are intercepted by Tauri** (`dragDropEnabled` defaults to `true`), so page content
+  cannot read dropped local file paths. Leave it alone unless you need HTML5 drag & drop.
+
+See [SECURITY.md](./SECURITY.md) for reporting vulnerabilities privately.
 
 ## Roadmap
 

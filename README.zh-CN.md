@@ -18,7 +18,7 @@
 | 常见痛点 | 本模板的做法 |
 | --- | --- |
 | Element Plus 暗黑模式与 UnoCSS `dark:` 变体各管各的 | 统一由 `<html class="dark">` 驱动，状态存 `localStorage`，刷新不闪回 |
-| `presetWind4` 的 reset 把 Element Plus 按钮底色刷成透明 | `preflights` 内联补丁覆盖，不额外引入 `@unocss/reset` |
+| reset 排在 Element Plus 之后，把组件样式一起重置掉 | `reset: false` 关掉内置 reset，改由 `@unocss/reset/tailwind-compat.css` 最前引入 |
 | UnoCSS 图标预设全盘扫描 `node_modules`，pnpm 下构建卡死 | 显式声明 `collections`（当前为 `tabler`） |
 | `file://` 场景下单个巨大 JS 包 | `manualChunks()` 拆出 `vue` / `element-plus` / `lodash` / `vendor` |
 | Sass legacy API 弃用告警 | 使用 `sass-embedded` + `api: "modern-compiler"` |
@@ -45,7 +45,7 @@
 ### 1. 环境准备
 
 - **Node.js 20 LTS+**、**pnpm 9+**
-- **Rust 1.77+**（[rustup](https://rustup.rs)）
+- **Rust 1.77.2+**（[rustup](https://rustup.rs)，Tauri 2 的 MSRV，可用 `pnpm tauri info` 校验工具链）
 - **平台构建工具**
   - Windows：Visual Studio 2022 生成工具，勾选【使用 C++ 的桌面开发】+ Windows 10/11 SDK
   - macOS：`xcode-select --install`
@@ -72,14 +72,19 @@ pnpm dev         # 仅浏览器，http://localhost:1420
 
 ### 4. 改成你自己的项目
 
-改名需要动 4 处（原名 `tauri-vue3-template`）：
+改名需要动 5 处（原名 `tauri-vue3-template`），**第 4 处漏掉会直接编译失败**：
 
 1. `package.json` → `name`
-2. `src-tauri/Cargo.toml` → `name` 与 `[lib].name`（`tauri_vue3_template_lib`，下划线）
-3. `src-tauri/tauri.conf.json` → `productName`、`identifier`（`com.<你>.<应用>`）、窗口 `title`
-4. 重新生成 capabilities 后检查 `src-tauri/gen/schemas/*`
+2. `src-tauri/Cargo.toml` → `name` 与 `[lib].name`（`tauri_vue3_template_lib`，下划线，不能用连字符）
+3. `src-tauri/tauri.conf.json` → `productName`、`identifier`（**必须全局唯一**，模板出厂值为 `com.example.tauri-vue3-template`）、窗口 `title`
+4. `src-tauri/src/main.rs` → `tauri_vue3_template_lib::run()`，**必须与 `[lib].name` 完全一致**，编译器不会自动推断
+5. `index.html` → `<title>`（只在开发/浏览器窗口可见，最容易忘）
+6. `src-tauri/tauri.conf.json` → `bundle.publisher` / `bundle.copyright`（出厂为 `Your Name`，MSI / RPM / AppImage 需要）
+7. `LICENSE` → 版权持有人那一行
 
-然后删掉 `src/components/Demo*.vue`，并移除 `src/App.vue` 里对应的 import。
+`src-tauri/Cargo.lock` 会在下次 `cargo` 执行时自动更新；`src-tauri/gen/schemas/*` 是自动生成的权限 JSON Schema，两者都不包含应用名。
+
+改完后删掉 `src/components/Demo*.vue` 与 `src/App.vue` 里的对应 import，再用 `pnpm build && pnpm tauri build` 验证。
 
 ## 命令
 
@@ -97,10 +102,10 @@ pnpm dev         # 仅浏览器，http://localhost:1420
 ```
 .
 ├── index.html
-├── uno.config.ts          # 预设、主题色、shortcuts、preflight 补丁
+├── uno.config.ts          # 预设、主题色、shortcuts（已关闭内置 reset）
 ├── vite.config.ts         # Vue + UnoCSS + 分包 + Tauri 开发服务器配置
 ├── src/
-│   ├── main.ts            # Element Plus + 暗黑 css-vars + uno.css + 全局 scss
+│   ├── main.ts            # 引入顺序：reset → Element Plus → uno.css → 全局 scss
 │   ├── App.vue            # 布局外壳、暗黑模式切换
 │   ├── components/        # Demo*.vue，替换为你的业务组件
 │   ├── styles/demo.scss   # 全局 SCSS（可直接写 @apply）
@@ -146,6 +151,21 @@ const message = await invoke<string>("greet", { name: "World" });
   全部绑定 Element Plus 的 CSS 变量。
 - **动态类名**：运行时拼接出来的类名不会被引擎静态提取，需加进 `uno.config.ts` 的 `safelist`。
 - **固定端口**：Vite 固定 `1420` 且 `strictPort: true`；watcher 忽略 `src-tauri`，避免前端保存触发 Rust 重编。
+
+## 安全
+
+- **CSP 已开启** —— `tauri.conf.json` 的 `app.security.csp`，对象形式。Tauri 在编译期为打包的
+  script/style 注入 nonce 与 hash，因此 `script-src` 无需 `'unsafe-inline'`。
+- **开发模式用独立策略** —— `app.security.devCsp` 刻意放宽，保证 Vite HMR（`ws://localhost:1421`）
+  可用。未设置 `devCsp` 时，Tauri 会在开发模式下回退使用 `csp`，这正是 HMR 失效的原因，**不要删掉它**。
+- **`connect-src` 只允许 IPC**（`ipc: http://ipc.localhost`）。若应用要请求外部 API，需自行加入
+  对应来源，否则打包后 `fetch` 失败、但 `pnpm dev` 下正常，很难排查。
+- **最小权限** —— `src-tauri/capabilities/default.json` 只授予 `core:default` 与 `opener:default`，
+  Tauri 2 默认是全拒绝。
+- **文件拖放由 Tauri 拦截**（`dragDropEnabled` 默认 `true`），页面拿不到拖入的本地文件路径。
+  除非确需 HTML5 拖放，否则不要改成 `false`。
+
+漏洞请私下报告，见 [SECURITY.md](./SECURITY.md)。
 
 ## 路线图
 

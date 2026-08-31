@@ -6,7 +6,7 @@ authors = ["qqlcx5"]
 license = "MIT"
 repository = "https://github.com/qqlcx5/tauri-template"
 homepage = "https://github.com/qqlcx5/tauri-template"
-keywords = ["tauri", "vue", "desktop", "template", "unocss", "element-plus"]
+keywords = ["tauri", "vue", "desktop", "template", "unocss"]
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

@@ -14,7 +14,7 @@ const cases = [
   {
     name: "暗黑变体",
     cls: "px-4 py-2 rounded-lg bg-neutral-100 dark:(bg-neutral-800 text-white)",
-    note: "presetWind3({ dark: 'class' })，跟随 <html class=\"dark\"> 与 Element Plus 同步",
+    note: "presetWind4({ dark: 'class' })，跟随 <html class=\"dark\"> 与 Element Plus 同步",
   },
   {
     name: "任意值 + important",
@@ -31,7 +31,7 @@ const cases = [
       UnoCSS：原子类 / 变体分组 / 暗黑模式
     </h2>
     <p class="demo-card__hint">
-      预设为 <code class="code-block">presetWind3</code>（presetUno 已被官方废弃重命名）。
+      预设为 <code class="code-block">presetWind4</code>，reset 与 theme 变量对齐 Tailwind4。
       下面每个色块的类名就是它自己 —— 打开 DevTools 能看到一一对应的原子规则。
     </p>
 

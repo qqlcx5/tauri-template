@@ -1,28 +1,17 @@
 <script setup lang="ts">
-import { ref } from "vue";
 import { ElMessage } from "element-plus";
-import DemoUno from "./components/DemoUno.vue";
-import DemoIcons from "./components/DemoIcons.vue";
-import DemoElement from "./components/DemoElement.vue";
-import DemoLodash from "./components/DemoLodash.vue";
+import { useThemeStore } from "./stores/theme";
 
-const STORAGE_KEY = "demo:dark";
+const theme = useThemeStore();
 
-// 从 localStorage 恢复，避免刷新时主题闪回
-const isDark = ref(localStorage.getItem(STORAGE_KEY) === "1");
-
-function applyDark(dark: boolean) {
-  // Element Plus 与 UnoCSS 的 dark: 变体都认 <html class="dark">，一次切换同时驱动两边
-  document.documentElement.classList.toggle("dark", dark);
-}
-
-applyDark(isDark.value);
+const navItems = [
+  { to: "/", label: "演示" },
+  { to: "/settings", label: "设置" },
+];
 
 function toggleDark() {
-  isDark.value = !isDark.value;
-  applyDark(isDark.value);
-  localStorage.setItem(STORAGE_KEY, isDark.value ? "1" : "0");
-  ElMessage.success(isDark.value ? "已切换到暗黑模式" : "已切换到亮色模式");
+  theme.toggle();
+  ElMessage.success(theme.isDark ? "已切换到暗黑模式" : "已切换到亮色模式");
 }
 </script>
 
@@ -37,12 +26,24 @@ function toggleDark() {
         UnoCSS · Element Plus · lodash-es · sass-embedded
       </el-tag>
 
-      <div class="ml-auto demo-row-2">
-        <el-tooltip :content="isDark ? '切到亮色' : '切到暗色'" placement="bottom">
+      <nav class="ml-auto flex items-center gap-1">
+        <RouterLink
+          v-for="item in navItems"
+          :key="item.to"
+          :to="item.to"
+          class="rounded px-3 py-1.5 text-sm text-secondary no-underline transition-colors hover:bg-[var(--el-fill-color-light)]"
+          active-class="!text-primary bg-[var(--el-fill-color)]"
+        >
+          {{ item.label }}
+        </RouterLink>
+      </nav>
+
+      <div class="demo-row-2">
+        <el-tooltip :content="theme.isDark ? '切到亮色' : '切到暗色'" placement="bottom">
           <el-button text circle @click="toggleDark">
             <span
               class="text-xl"
-              :class="isDark ? 'i-tabler-moon-stars' : 'i-tabler-sun-high'"
+              :class="theme.isDark ? 'i-tabler-moon-stars' : 'i-tabler-sun-high'"
             />
           </el-button>
         </el-tooltip>
@@ -58,15 +59,8 @@ function toggleDark() {
       </div>
     </header>
 
-    <main class="mx-auto max-w-6xl p-4 flex flex-col gap-4">
-      <DemoUno />
-      <DemoIcons />
-      <DemoElement />
-      <DemoLodash />
-
-      <footer class="py-6 text-center text-xs text-secondary">
-        所有样式由 UnoCSS 按需生成 —— 未使用的类名不会进入产物
-      </footer>
+    <main class="mx-auto max-w-6xl p-4">
+      <RouterView />
     </main>
   </div>
 </template>

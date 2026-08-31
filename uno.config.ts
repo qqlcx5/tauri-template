@@ -9,14 +9,15 @@ import {
 
 export default defineConfig({
   presets: [
-    // presetUno / presetWind → presetWind3 → presetWind4，后者的 reset 与 theme 变量
-    // 对齐 Tailwind4，其余工具类写法与 presetWind3 完全兼容
+    // reset 与 theme 变量对齐 Tailwind4
     presetWind4({
       // 与 Element Plus 暗黑模式对齐：EP 靠 <html class="dark"> 切换（本就是默认值，显式写出防回归）
       dark: "class",
       preflights: {
-        // 内置 Tailwind4 版 reset，不需要再装 @unocss/reset 或 normalize.css
-        reset: true,
+        // 内置 reset 随原子类一起排在 Element Plus 之后，会盖掉组件库样式。
+        // 改由 main.ts 最先引入 @unocss/reset/tailwind-compat.css。
+        // （关掉它不影响 font-mono 一类原子类，它们在规则内部自行注册 theme 变量。）
+        reset: false,
         // theme 变量按需生成（默认值）：只输出真正用到的 --colors-* / --spacing 等 CSS 变量
         theme: "on-demand",
       },
@@ -78,23 +79,6 @@ export default defineConfig({
       ],
     },
   },
-
-  // presetWind4 内置 reset 会把 button/input/select/textarea 的背景刷成 transparent，
-  // 与 Element Plus 的按钮底色冲突。
-  // 官方为此提供 @unocss/reset/tailwind-compat.css，这里用 preflights 内联等价补丁，
-  // 省掉一个依赖包。
-  // 注意：自定义 preflight 默认落在 order 0 层，排在 presetWind4 的 base 层（-100）之后，
-  // 因此能覆盖掉上面的 reset。
-  preflights: [
-    {
-      getCSS: () => `
-button, [type='button'], [type='reset'], [type='submit'] {
-  background-color: revert;
-  background-image: none;
-}
-`,
-    },
-  ],
 
   // 运行时拼接出来的类名无法静态提取，放这里兜底
   // 例：safelist: ['text-danger', 'text-success', 'text-warning']

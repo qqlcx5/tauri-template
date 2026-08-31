@@ -33,6 +33,11 @@ export default defineConfig((): UserConfig => ({
   build: {
     // Tauri 只跑在现代 WebView 上，无需向下兼容转译，可省掉降级开销、缩小产物
     target: "esnext",
+    // 所有样式合并进单个 CSS 文件，顺序严格遵循 main.ts 的 import 顺序。
+    // 开启分割时 CSS 各自跟着 JS chunk 成文件，顺序由 chunk 顺序决定：Element Plus
+    // 分到独立 chunk 后其 CSS 会先于含 reset 的入口 CSS 加载，层叠被反转（已实测）。
+    // 代价：将来上路由懒加载，异步页的 CSS 也会进首屏这一个文件。
+    cssCodeSplit: false,
     rollupOptions: {
       output: {
         // 用函数而不是对象形式分包：
@@ -57,6 +62,8 @@ export default defineConfig((): UserConfig => ({
           const pkg = head.charAt(0) === "@" && scoped ? `${head}/${scoped}` : head;
 
           if (pkg === "vue" || pkg.indexOf("@vue/") === 0) return "vue";
+          // 路由与状态管理跟 vue 同生共死，合进同一 chunk，省一个请求
+          if (pkg === "pinia" || pkg === "vue-router") return "vue";
           if (pkg.indexOf("element-plus") === 0 || pkg.indexOf("@element-plus") === 0)
             return "element-plus";
           if (pkg === "lodash-es" || pkg === "lodash") return "lodash";

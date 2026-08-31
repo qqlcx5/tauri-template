@@ -14,16 +14,38 @@
       {
         "title": "tauri-vue3-template",
         "width": 800,
-        "height": 600
+        "height": 600,
+        "minWidth": 640,
+        "minHeight": 480,
+        "center": true
       }
     ],
     "security": {
-      "csp": null
+      "csp": {
+        "default-src": "'self'",
+        "connect-src": "ipc: http://ipc.localhost",
+        "img-src": "'self' asset: http://asset.localhost blob: data:",
+        "style-src": "'unsafe-inline' 'self'",
+        "font-src": "'self' data:"
+      },
+      "devCsp": {
+        "default-src": "'self'",
+        "script-src": "'self' 'unsafe-inline'",
+        "style-src": "'unsafe-inline' 'self'",
+        "connect-src": "'self' ipc: http://ipc.localhost ws://localhost:1421 http://localhost:1420",
+        "img-src": "'self' asset: http://asset.localhost blob: data:",
+        "font-src": "'self' data:"
+      }
     }
   },
   "bundle": {
     "active": true,
     "targets": "all",
+    "publisher": "qqlcx5",
+    "copyright": "Copyright © 2026 qqlcx5. All rights reserved.",
+    "category": "DeveloperTool",
+    "shortDescription": "Tauri 2 + Vue 3 desktop app template",
+    "longDescription": "A batteries-included cross-platform desktop app template built with Tauri 2 (Rust), Vue 3, TypeScript, Vite, UnoCSS and Element Plus, with dark mode and production code splitting preconfigured.",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
