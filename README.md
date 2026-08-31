@@ -1,99 +1,204 @@
-**Windows 上安装 Rust/Tauri 必须严格按照顺序来，否则后期报错会让你非常头疼。**
+# Tauri 2 + Vue 3 Starter Template
 
-这是世界上最懂这行的人（比如 Tauri 核心团队或 Rust 资深开发者）会给你的 **“避坑指南”**。
+[![Tauri](https://img.shields.io/badge/Tauri-2.x-ffc131?logo=tauri&logoColor=white)](https://tauri.app)
+[![Vue](https://img.shields.io/badge/Vue-3.5-42b883?logo=vuedotjs&logoColor=white)](https://vuejs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![Vite](https://img.shields.io/badge/Vite-6-646cff?logo=vite&logoColor=white)](https://vite.dev)
+[![UnoCSS](https://img.shields.io/badge/UnoCSS-Wind4-333?logo=unocss&logoColor=white)](https://unocss.dev)
+[![Element Plus](https://img.shields.io/badge/Element%20Plus-2.14-409eff?logo=element&logoColor=white)](https://element-plus.org)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](./CONTRIBUTING.md)
+
+A batteries-included **desktop app template**: **Tauri 2 (Rust)** + **Vue 3 (TypeScript)** + **Vite 6**
++ **UnoCSS (Tailwind 4 preset)** + **Element Plus**, with dark mode, code-splitting and Windows
+toolchain issues already solved.
+
+> Looking for the Chinese version? See [README.zh-CN.md](./README.zh-CN.md).
+
+**Keywords:** `tauri template` · `tauri 2 vue 3` · `tauri vite starter` · `vue 3 desktop app` ·
+`electron alternative` · `rust vue desktop` · `unocss element plus` · `tauri windows setup` ·
+`cross-platform desktop app template`
 
 ---
 
-### 核心原则：不要跳步，特别是第一步。
+## Why this template
 
-### 第一步：安装 C++ 生成工具 (最重要，必须先做)
-Rust 在 Windows 上编译需要依赖 Microsoft 的链接器 (MSVC)。**千万不要直接去装 Rust，先装这个。**
+Most Tauri starters stop at "it compiles". This one ships the config you would otherwise spend a
+weekend debugging:
 
-1.  **下载**: 访问 [Visual Studio Downloads](https://visualstudio.microsoft.com/zh-hans/visual-studio-tools/)。
-2.  **寻找**: 往下翻，找到 **“Visual Studio 2022 生成工具 (Build Tools for Visual Studio 2022)”**，点击下载。
-3.  **安装 (关键点)**:
-    *   运行安装程序。
-    *   **勾选**: 在“工作负荷 (Workloads)”标签页中，**必须勾选【使用 C++ 的桌面开发 (Desktop development with C++)】**。
-    *   右侧详情里，确保勾选了 `Windows 10 (或 11) SDK`。
-    *   点击“安装”。(这步大概需要下载 2-3GB，喝杯咖啡等待)。
+| Pain point | Solved here |
+| --- | --- |
+| Element Plus dark mode and UnoCSS `dark:` variants fighting each other | Both driven by one `<html class="dark">` toggle, persisted to `localStorage` |
+| UnoCSS `presetWind4` reset wipes Element Plus button backgrounds | Inlined `preflights` patch (no extra `@unocss/reset` dependency) |
+| UnoCSS icon preset scans all of `node_modules` and hangs under pnpm | Icon collections declared explicitly (`tabler`) |
+| One giant JS bundle loaded from `file://` | `manualChunks()` splits `vue` / `element-plus` / `lodash` / `vendor` |
+| Sass legacy API deprecation warnings | `sass-embedded` + `api: "modern-compiler"` |
+| Vite dev server breaks on LAN / physical device | `TAURI_DEV_HOST` wires up HMR host and port |
+| `cargo` crawling in China | Mirror-source instructions in [Windows setup](./initialize.md) |
 
-### 第二步：安装 Rust (Rustup)
-1.  **下载**: 访问 [Rust 官网](https://www.rust-lang.org/tools/install)。
-2.  **运行**: 下载 `rustup-init.exe` (64-bit)。
-3.  **操作**:
-    *   双击运行，会弹出一个黑框终端。
-    *   它会检测到你已经安装了 C++ Build Tools。
-    *   看到提示 `1) Proceed with installation (default)` 时，直接输入 **1** 并回车。
-4.  **配置环境**: 安装完成后，脚本会提示你配置好了。
-    *   **重要**: 关闭所有终端 (CMD/PowerShell/VSCode)，重新打开一个新的，让环境变量生效。
+## Screenshots
 
-### 第三步：验证安装
-打开 PowerShell 或 CMD，输入以下命令：
+<!-- Drop a PNG at docs/screenshot.png and uncomment:
+![App screenshot](./docs/screenshot.png)
+-->
+
+Run `pnpm tauri dev` to see the four built-in demos (UnoCSS utilities · Iconify icons · Element Plus
+components · lodash-es helpers) with a light/dark toggle in the header.
+
+## Tech stack
+
+| Layer | Choice | Version |
+| --- | --- | --- |
+| Runtime / shell | [Tauri](https://tauri.app) | 2.x (Rust, edition 2021) |
+| UI framework | [Vue 3](https://vuejs.org) (`<script setup>` + TS) | 3.5 |
+| Language | [TypeScript](https://www.typescriptlang.org) | 5.6 |
+| Build tool | [Vite](https://vite.dev) | 6 |
+| CSS engine | [UnoCSS](https://unocss.dev) (`presetWind4` + `presetIcons` + `presetAttributify`) | 66 |
+| Component library | [Element Plus](https://element-plus.org) | 2.14 |
+| Icons | [Iconify / Tabler](https://icon-sets.iconify.design/tabler/) | — |
+| Utilities | [lodash-es](https://lodash.com) | 4 |
+| Styles | SCSS via [sass-embedded](https://sass-lang.com) | 1.103 |
+| Package manager | [pnpm](https://pnpm.io) | recommended |
+
+## Quick start
+
+### 1. Prerequisites
+
+- **Node.js 20 LTS+** and **pnpm 9+**
+- **Rust 1.77+** ([rustup](https://rustup.rs))
+- **Platform build tools**
+  - Windows: *Build Tools for Visual Studio 2022* with **Desktop development with C++** + Windows 10/11 SDK
+  - macOS: Xcode Command Line Tools (`xcode-select --install`)
+  - Linux: `webkit2gtk-4.1`, `libayatana-appindicator3`, `librsvg2`, `build-essential`, `pkg-config`
+
+  Full step-by-step (including China cargo mirrors): [initialize.md](./initialize.md).
+
+### 2. Create your project
 
 ```bash
-rustc --version
-# 应该输出类似: rustc 1.75.0 (xxxxxx)
+# Option A — use as a GitHub template (click "Use this template" on the repo page), then:
+git clone https://github.com/<your-name>/<your-app>.git
+cd <your-app>
+pnpm install
 
-cargo --version
-# 应该输出类似: cargo 1.75.0 (xxxxxx)
+# Option B — clone this repo directly
+git clone https://github.com/qqlcx5/tauri-template.git
+cd tauri-template
+pnpm install
 ```
 
-### 第四步：解决国内网络问题 (选做，但强烈建议)
-如果你在中国大陆，`cargo` 下载依赖包会极慢甚至失败。你需要配置**国内镜像源**。
+### 3. Run
 
-1.  在用户目录下找到 `.cargo` 文件夹 (通常在 `C:\Users\你的用户名\.cargo`)。
-2.  新建一个没有后缀名的文件，叫 `config` (如果有了就打开编辑)。
-3.  粘贴以下内容 (使用字节跳动或清华源)：
-
-```toml
-[source.crates-io]
-replace-with = 'rsproxy-sparse'
-
-[source.rsproxy]
-registry = "https://rsproxy.cn/crates.io-index"
-
-[source.rsproxy-sparse]
-registry = "sparse+https://rsproxy.cn/index/"
-
-[registries.crates-io]
-protocol = "sparse"
+```bash
+pnpm tauri dev      # desktop app with hot reload
+pnpm dev            # browser only (http://localhost:1420)
 ```
 
-### 换个更稳的源（推荐：清华源或由上海交大源）
-```toml
-[source.crates-io]
-replace-with = 'tuna'
+A window titled `tauri-vue3-template` opens. Edit `src/App.vue` and it hot-reloads.
 
-[source.tuna]
-registry = "https://mirrors.tuna.tsinghua.edu.cn/git/crates.io-index.git"
+### 4. Rename it to your app
 
-# 如果清华源也卡，可以把上面的注释掉，试一下下面的上海交大源（二选一）
-# [source.crates-io]
-# replace-with = 'sjtu'
-#
-# [source.sjtu]
-# registry = "https://mirrors.sjtug.sjtu.edu.cn/git/crates.io-index"
+Four places hold the name `tauri-vue3-template`:
+
+1. `package.json` → `name`
+2. `src-tauri/Cargo.toml` → `name` **and** `[lib].name` (`tauri_vue3_template_lib`, underscores)
+3. `src-tauri/tauri.conf.json` → `productName`, `identifier` (`com.<you>.<app>`), window `title`
+4. `src-tauri/gen/schemas/*` if you regenerate capabilities
+
+Then delete the demo components (`src/components/Demo*.vue`) and their imports in `src/App.vue`.
+
+## Commands
+
+| Command | What it does |
+| --- | --- |
+| `pnpm dev` | Vite dev server only |
+| `pnpm build` | Type-check (`vue-tsc --noEmit`) + production bundle to `dist/` |
+| `pnpm preview` | Preview the built frontend |
+| `pnpm tauri dev` | Run the desktop app in dev mode |
+| `pnpm tauri build` | Produce installers in `src-tauri/target/release/bundle/` |
+| `pnpm tauri info` | Print environment diagnostics (paste this into issues) |
+
+## Project structure
+
+```
+.
+├── index.html
+├── uno.config.ts          # presets, theme colors, shortcuts, preflight patch
+├── vite.config.ts         # Vue + UnoCSS + manualChunks + Tauri dev server
+├── src/
+│   ├── main.ts            # Element Plus + dark css-vars + uno.css + global scss
+│   ├── App.vue            # layout shell, dark-mode toggle
+│   ├── components/        # Demo*.vue — replace these
+│   ├── styles/demo.scss   # global SCSS (@apply works here)
+│   └── assets/
+└── src-tauri/
+    ├── Cargo.toml
+    ├── tauri.conf.json    # productName, identifier, window, bundle
+    ├── capabilities/      # permission sets (least-privilege)
+    ├── icons/             # generated from a single source PNG
+    └── src/
+        ├── main.rs        # binary entry
+        └── lib.rs         # `run()` + `greet` command example
 ```
 
-### 第五步：安装 Tauri CLI 并创建项目
-假设你已经安装了 Node.js (建议 v18 LTS 或 v20 LTS)。
+## Calling Rust from Vue
 
-1.  **创建项目**:
-    ```bash
-    npm create tauri-app@latest
-    ```
-2.  **回答问题**:
-    *   Project name: `my-video-manager`
-    *   Frontend language: `JavaScript` (既然你刚才选了不想用 TS)
-    *   Package manager: `pnpm` (推荐) 或 `npm`
-    *   UI Template: `Vue`
-    *   UI Flavor: `Element Plus` (或者选 TypeScript 稍后手动改)
+`src-tauri/src/lib.rs` already exposes a command:
 
-3.  **运行开发环境**:
-    ```bash
-    cd my-video-manager
-    npm install
-    npm run tauri dev
-    ```
+```rust
+#[tauri::command]
+fn greet(name: &str) -> String {
+    format!("Hello, {}! You've been greeted from Rust!", name)
+}
+```
 
-**成功标志**: 你的电脑会弹出一个空白的 Windows 窗口，里面显示 Vue 的欢迎界面。此时，Rust 后端和 Web 前端已经打通了。
+Call it from the frontend:
+
+```ts
+import { invoke } from "@tauri-apps/api/core";
+
+const message = await invoke<string>("greet", { name: "World" });
+```
+
+Add new permissions in `src-tauri/capabilities/default.json` — Tauri 2 is deny-by-default.
+
+## Configuration notes
+
+- **Dark mode**: `applyDark()` in `src/App.vue` toggles `<html class="dark">`, which drives both
+  Element Plus CSS vars and UnoCSS `dark:` variants. State lives in `localStorage` under `demo:dark`.
+- **Theme colors**: `uno.config.ts` maps `primary` / `success` / `warning` / `danger` to the Element
+  Plus palette, so `text-danger` and EP components stay visually consistent.
+- **Shortcuts**: `flex-center`, `flex-col-center`, `bg-page`, `text-regular`, `text-secondary` — all
+  bound to Element Plus CSS variables.
+- **Dynamic class names**: add runtime-built utilities to `safelist` in `uno.config.ts`, otherwise
+  they are never generated.
+- **Fixed port**: Vite is pinned to `1420` with `strictPort: true`; `src-tauri` is excluded from the
+  watcher so Rust rebuilds are not triggered by frontend saves.
+
+## Roadmap
+
+- [ ] Router (Vue Router) + state management (Pinia) presets
+- [ ] Auto-update / updater plugin example
+- [ ] System tray & native menu example
+- [ ] Multi-window example
+- [ ] GitHub Actions cross-platform release workflow
+- [ ] i18n (vue-i18n) preset
+
+Ideas and PRs welcome — see [CONTRIBUTING.md](./CONTRIBUTING.md).
+
+## Contributing
+
+1. Fork → branch (`feat/xxx`, `fix/xxx`)
+2. `pnpm install && pnpm tauri dev` — make sure it runs
+3. `pnpm build` — must pass `vue-tsc` type-check
+4. Commit with [Conventional Commits](https://www.conventionalcommits.org) (`feat:`, `fix:`, `chore:`)
+5. Open a PR describing the problem and the fix
+
+## License
+
+[MIT](./LICENSE) — free to use for personal and commercial projects.
+
+---
+
+If this template saved you time, a **star** is the cheapest way to say thanks and it helps others
+find the repo.
