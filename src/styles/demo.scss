@@ -1,0 +1,65 @@
+// 全局样式：演示 sass-embedded 的能力（变量 / mixin / 嵌套 / @each / 媒体查询）
+// 由 Vite 自动交给 sass-embedded 编译（见 vite.config.ts 的 css.preprocessorOptions.scss.api）
+
+$radius: 12px;
+$gap: 12px;
+
+@mixin surface($pad: 16px) {
+  padding: $pad;
+  border: 1px solid var(--el-border-color);
+  border-radius: $radius;
+  background-color: var(--el-bg-color);
+}
+
+.demo-card {
+  @include surface;
+
+  // 嵌套 + & 父选择器引用
+  &__title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 4px;
+    font-size: 16px;
+    font-weight: 600;
+
+    &::before {
+      content: "";
+      width: 4px;
+      height: 16px;
+      border-radius: 2px;
+      background-color: var(--el-color-primary);
+    }
+  }
+
+  &__hint {
+    margin: 0 0 $gap;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--el-text-color-secondary);
+  }
+}
+
+// @each 循环生成工具类
+@each $n in (1, 2, 3, 4) {
+  .demo-row-#{$n} {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: #{$n * 4}px;
+  }
+}
+
+// UnoCSS 指令在外部 SCSS 里同样可用（transformerDirectives）
+.code-block {
+  @apply block rounded px-2 py-1 text-xs font-mono;
+  color: theme("colors.info");
+  background-color: var(--el-fill-color-light);
+  word-break: break-all;
+}
+
+@media (max-width: 640px) {
+  .demo-card {
+    padding: 12px;
+  }
+}

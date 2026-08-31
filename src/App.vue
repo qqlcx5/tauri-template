@@ -1,160 +1,72 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { invoke } from "@tauri-apps/api/core";
+import { ElMessage } from "element-plus";
+import DemoUno from "./components/DemoUno.vue";
+import DemoIcons from "./components/DemoIcons.vue";
+import DemoElement from "./components/DemoElement.vue";
+import DemoLodash from "./components/DemoLodash.vue";
 
-const greetMsg = ref("");
-const name = ref("");
+const STORAGE_KEY = "demo:dark";
 
-async function greet() {
-  // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-  greetMsg.value = await invoke("greet", { name: name.value });
+// 从 localStorage 恢复，避免刷新时主题闪回
+const isDark = ref(localStorage.getItem(STORAGE_KEY) === "1");
+
+function applyDark(dark: boolean) {
+  // Element Plus 与 UnoCSS 的 dark: 变体都认 <html class="dark">，一次切换同时驱动两边
+  document.documentElement.classList.toggle("dark", dark);
+}
+
+applyDark(isDark.value);
+
+function toggleDark() {
+  isDark.value = !isDark.value;
+  applyDark(isDark.value);
+  localStorage.setItem(STORAGE_KEY, isDark.value ? "1" : "0");
+  ElMessage.success(isDark.value ? "已切换到暗黑模式" : "已切换到亮色模式");
 }
 </script>
 
 <template>
-  <main class="container">
-    <h1>Welcome to Tauri + Vue</h1>
+  <div class="min-h-screen bg-page text-regular">
+    <header
+      class="sticky top-0 z-10 h-14 flex items-center gap-3 border-b border-[var(--el-border-color)] bg-[var(--el-bg-color)]/85 px-4 backdrop-blur"
+    >
+      <span class="i-tabler-rocket text-2xl text-primary" />
+      <h1 class="text-base font-bold">Tauri + Vue 技术栈演示</h1>
+      <el-tag size="small" type="info" effect="plain" class="hidden sm:inline-flex">
+        UnoCSS · Element Plus · lodash-es · sass-embedded
+      </el-tag>
 
-    <div class="row">
-      <a href="https://vite.dev" target="_blank">
-        <img src="/vite.svg" class="logo vite" alt="Vite logo" />
-      </a>
-      <a href="https://tauri.app" target="_blank">
-        <img src="/tauri.svg" class="logo tauri" alt="Tauri logo" />
-      </a>
-      <a href="https://vuejs.org/" target="_blank">
-        <img src="./assets/vue.svg" class="logo vue" alt="Vue logo" />
-      </a>
-    </div>
-    <p>Click on the Tauri, Vite, and Vue logos to learn more.</p>
+      <div class="ml-auto demo-row-2">
+        <el-tooltip :content="isDark ? '切到亮色' : '切到暗色'" placement="bottom">
+          <el-button text circle @click="toggleDark">
+            <span
+              class="text-xl"
+              :class="isDark ? 'i-tabler-moon-stars' : 'i-tabler-sun-high'"
+            />
+          </el-button>
+        </el-tooltip>
+        <el-button
+          text
+          circle
+          tag="a"
+          href="https://github.com/tauri-apps/tauri"
+          target="_blank"
+        >
+          <span class="i-tabler-brand-github text-xl" />
+        </el-button>
+      </div>
+    </header>
 
-    <form class="row" @submit.prevent="greet">
-      <input id="greet-input" v-model="name" placeholder="Enter a name..." />
-      <button type="submit">Greet</button>
-    </form>
-    <p>{{ greetMsg }}</p>
-  </main>
+    <main class="mx-auto max-w-6xl p-4 flex flex-col gap-4">
+      <DemoUno />
+      <DemoIcons />
+      <DemoElement />
+      <DemoLodash />
+
+      <footer class="py-6 text-center text-xs text-secondary">
+        所有样式由 UnoCSS 按需生成 —— 未使用的类名不会进入产物
+      </footer>
+    </main>
+  </div>
 </template>
-
-<style scoped>
-.logo.vite:hover {
-  filter: drop-shadow(0 0 2em #747bff);
-}
-
-.logo.vue:hover {
-  filter: drop-shadow(0 0 2em #249b73);
-}
-
-</style>
-<style>
-:root {
-  font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
-  font-size: 16px;
-  line-height: 24px;
-  font-weight: 400;
-
-  color: #0f0f0f;
-  background-color: #f6f6f6;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  -webkit-text-size-adjust: 100%;
-}
-
-.container {
-  margin: 0;
-  padding-top: 10vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  text-align: center;
-}
-
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: 0.75s;
-}
-
-.logo.tauri:hover {
-  filter: drop-shadow(0 0 2em #24c8db);
-}
-
-.row {
-  display: flex;
-  justify-content: center;
-}
-
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-
-a:hover {
-  color: #535bf2;
-}
-
-h1 {
-  text-align: center;
-}
-
-input,
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  color: #0f0f0f;
-  background-color: #ffffff;
-  transition: border-color 0.25s;
-  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.2);
-}
-
-button {
-  cursor: pointer;
-}
-
-button:hover {
-  border-color: #396cd8;
-}
-button:active {
-  border-color: #396cd8;
-  background-color: #e8e8e8;
-}
-
-input,
-button {
-  outline: none;
-}
-
-#greet-input {
-  margin-right: 5px;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    color: #f6f6f6;
-    background-color: #2f2f2f;
-  }
-
-  a:hover {
-    color: #24c8db;
-  }
-
-  input,
-  button {
-    color: #ffffff;
-    background-color: #0f0f0f98;
-  }
-  button:active {
-    background-color: #0f0f0f69;
-  }
-}
-
-</style>
